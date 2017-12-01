@@ -43,13 +43,12 @@ stability, either use the tagged releases or mirror on gopkg.in:
 go get -u gopkg.in/fardog/reverseoperator.v1
 ```
 
-## Caveats/TODO
+## Caveats
 
-* More thorough tests should be written
-* No caching is implemented; every request will cause a lookup against the
-  configured upstream DNS servers. If you need caching, it's up to you to
-  configure a caching DNS server (such as [dnsmasq][]) which `reverse-operator`
-  will request against.
+* No DNS lookup caching is implemented, and likely never will; every request
+  will cause a lookup against the configured upstream DNS servers. If you need
+  caching, it's up to you to configure a caching DNS server (such as
+  [dnsmasq][]) which `reverse-operator` will request against.
 
 ## License
 
