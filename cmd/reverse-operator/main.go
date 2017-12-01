@@ -96,16 +96,11 @@ func main() {
 	options := &revop.HandlerOptions{}
 	handler := revop.NewHandler(provider, options)
 
-	http.HandleFunc("/resolve", handler.Handle)
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/resolve", handler.Handle)
 	server := &http.Server{
-		Addr:           *listenAddress,
-		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:    *listenAddress,
+		Handler: mux,
 	}
 
 	// start the servers
