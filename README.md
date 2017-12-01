@@ -31,7 +31,7 @@ This will start an HTTP server listening at `:80`. For usage information, run
 
 **Note:** Running a service on port `80` requires administrative privileges on
 most systems. For local development, you may specify a different port using the
-`--listen-address` flag.
+`--listen` flag.
 
 ## Version Compatibility
 
@@ -40,7 +40,7 @@ always considered stable, but may break API compatibility. If you require API
 stability, either use the tagged releases or mirror on gopkg.in:
 
 ```
-go get -u gopkg.in/fardog/reverseoperator.v1
+go get -u gopkg.in/fardog/reverseoperator.v0
 ```
 
 ## Caveats
@@ -69,3 +69,4 @@ The Google DNS-over-HTTPS API is licensed under the
 [cc-by-3.0]: http://creativecommons.org/licenses/by/3.0/
 [secure-operator]: https://github.com/fardog/secureoperator
 [dnsmasq]: http://www.thekelleys.org.uk/dnsmasq/doc.html
+[semver]: https://semver.org/
