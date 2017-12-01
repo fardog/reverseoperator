@@ -39,7 +39,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	gdns := fromDNStoGDNS(resp)
 
-	w.Header().Set("Content-Type", "application/json")
+	// these headers match google's service, as off as they may seem
+	w.Header().Set("content-type", "application/x-javascript; charset=UTF-8")
+	w.Header().Set("cache-control", "private")
+	w.Header().Set("x-xss-protection", "1; mode=block")
+	w.Header().Set("x-frame-options", "SAMEORIGIN")
+
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(gdns); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

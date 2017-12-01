@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/miekg/dns"
 
 	revop "github.com/fardog/reverseoperator"
 	"github.com/fardog/secureoperator/cmd"
@@ -29,34 +29,39 @@ var (
 		"Log level, one of: debug, info, warn, error, fatal, panic",
 	)
 
+	shutdownTimeout = flag.Int(
+		"timeout", 10, "time in seconds to hold shutdown for connected clients",
+	)
+
 	dnsServers = flag.String(
 		"dns-servers",
-		"",
-		`DNS Servers used to look up the endpoint; system default is used if absent.
-        Ignored if "endpoint-ips" is set. Comma separated, e.g. "8.8.8.8,8.8.4.4:53".
-        The port section is optional, and 53 will be used by default.`,
+		"8.8.8.8,8.8.4.4",
+		`DNS Servers used to look up the endpoint; Comma separated, e.g.
+        "8.8.8.8,8.8.4.4:53". The port section is optional, and 53 will be used
+        by default.`,
 	)
 )
 
-func serve(net string) {
-	log.Infof("starting %s service on %s", net, *listenAddress)
-
-	server := &dns.Server{Addr: *listenAddress, Net: net, TsigSecret: nil}
+func serve(server *http.Server) {
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatalf("Failed to setup the %s server: %s\n", net, err.Error())
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
 		}
 	}()
-
 	// serve until exit
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	log.Infof("shutting down %s on interrupt\n", net)
-	if err := server.Shutdown(); err != nil {
+	log.Infoln("shutting down on interrupt")
+	timeout := time.Duration(*shutdownTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
 		log.Errorf("got unexpected error %s", err.Error())
 	}
+
+	<-ctx.Done()
 }
 
 func main() {
@@ -92,7 +97,26 @@ func main() {
 	handler := revop.NewHandler(provider, options)
 
 	http.HandleFunc("/resolve", handler.Handle)
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
 
+	mux := http.NewServeMux()
+	mux.HandleFunc("/resolve", handler.Handle)
+	server := &http.Server{
+		Addr:           *listenAddress,
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	// start the servers
+	servers := make(chan bool)
+	go func() {
+		serve(server)
+		servers <- true
+	}()
+
+	log.Infof("server started on %v", *listenAddress)
+	<-servers
 	log.Infoln("servers exited, stopping")
+
 }
