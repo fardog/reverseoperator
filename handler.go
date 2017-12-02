@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	log "github.com/Sirupsen/logrus"
+
 	secop "github.com/fardog/secureoperator"
 )
 
@@ -23,17 +25,21 @@ type Handler struct {
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	q, err := urlToDNSQuestion(r.URL)
-	if err != nil {
+	fail := func(status int, err error) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
+		log.Error(err)
+	}
+
+	q, err := urlToDNSQuestion(r.URL)
+	if err != nil {
+		fail(http.StatusServiceUnavailable, err)
 		return
 	}
 
 	resp, err := h.provider.Query(*q)
 	if err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		fmt.Fprint(w, err)
+		fail(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -47,8 +53,9 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(gdns); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
+		fail(http.StatusBadRequest, err)
 		return
 	}
+
+	log.Infof("responded to request %v[%v]", q.Name, q.Type)
 }

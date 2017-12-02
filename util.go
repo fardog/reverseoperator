@@ -33,7 +33,7 @@ func urlToDNSQuestion(url *url.URL) (*secop.DNSQuestion, error) {
 	rtype, err := strconv.ParseUint(t, 10, 16)
 	if t != "" && err != nil {
 		return nil, errTypeInvalid
-	} else {
+	} else if t == "" {
 		rtype = 1
 	}
 	if rtype < 1 || rtype > 65536 {
