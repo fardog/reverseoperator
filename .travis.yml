@@ -1,0 +1,27 @@
+language: go
+go:
+- 1.8
+- 1.9
+- tip
+install:
+- go get -u -v github.com/fardog/reverseoperator
+- go get -u -v github.com/fardog/reverseoperator/cmd
+- go get -u -v github.com/fardog/reverseoperator/cmd/reverse-operator
+before_deploy: make release
+deploy:
+  provider: releases
+  api_key:
+    secure: Mw/MA0W8vnPo/UiLacAi79H/FUN7Im3QGSOf2k2u/q3RA3gHPaJWYSk7yJ6GJzj7w9o6rML+mdCrEpOBDgm7QxCJZEQ1og+A6EFvA7JHVKilVZw/ifI3hoqohGu1F+uqQOBBYyXA8ZclapNfnokKFbAVo30pN7N7oY9mKS1Y9i28LLdlPql+mrJcqiYbqSmLsMXh9D12hbS+zCOfXy3ouE3xd+ouQvxPwdlTp2pdyN+um/3jCzVQi6hkiLuTOP6n24Zs69sQPGANKxlJbCggUDZ/EqLmcj4AmdtkSfRvc2fvGsfm+LbLGwp9DV9D0RFUuk46A+aV5pdKKNVu88ao6UXj5PGDE/jLOTI9xxiSzYZoIuz3LBWHBK+BlPaZty+egoP+NB7t6R8Yvo8EWVAVUMR+xp0VSCMzDloicl9KH9r2ObFGVlhcfioSTWhHD1kJeThk8tr71iSxYxmmJKJRxyXPV1aA/O8lv18vUz6IZtICJkpt8ikBLL5BEI8q3XHInOj5Rvmjkzfucy7Xgv9xjQXQgCKpOK0WgxGj0VYQIa7f1i64DnTjuiO4H2Bsz7BwEpCG4CdN9K4yQqZIwuGssDRKfnkIFPeMrLhRE5nJ1dn0GyEfeixvGqIb23s63fAsY5xMx5wQKug6SkWDRWkk69Sd92P3Hl1w0Yh8b8I15FA=
+  file:
+  - release/reverse-operator_linux-amd64
+  - release/reverse-operator_linux-386
+  - release/reverse-operator_linux-arm
+  - release/reverse-operator_macos-amd64
+  - release/reverse-operator_macos-386
+  - release/reverse-operator_windows-amd64.exe
+  - release/reverse-operator_windows-386.exe
+  skip_cleanup: true
+  on:
+    repo: fardog/reverseoperator
+    tags: true
+    go: 1.9
