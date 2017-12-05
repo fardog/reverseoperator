@@ -1,6 +1,6 @@
 FROM golang:alpine
 
-EXPOSE 53
+EXPOSE 80
 
 RUN apk --no-cache add ca-certificates && update-ca-certificates
 
@@ -10,4 +10,4 @@ COPY . /go/src/github.com/fardog/reverseoperator
 WORKDIR /go/src/github.com/fardog/reverseoperator/cmd/reverse-operator
 RUN go install -v
 
-CMD reverse-operator --listen 0.0.0.0:53
+CMD reverse-operator --listen 0.0.0.0:80
