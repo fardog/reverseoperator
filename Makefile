@@ -15,4 +15,4 @@ release:
 	GOOS=windows GOARCH=386 go build -o release/reverse-operator_windows-386.exe $(cmd_package)
 
 test:
-	go test -v ./ ./cmd
+	go test -v ./
