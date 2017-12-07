@@ -26,20 +26,20 @@ type Handler struct {
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	fail := func(status int, err error) {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(status)
 		fmt.Fprint(w, err)
 		log.Error(err)
 	}
 
 	q, err := urlToDNSQuestion(r.URL)
 	if err != nil {
-		fail(http.StatusServiceUnavailable, err)
+		fail(http.StatusBadRequest, err)
 		return
 	}
 
 	resp, err := h.provider.Query(*q)
 	if err != nil {
-		fail(http.StatusInternalServerError, err)
+		fail(http.StatusServiceUnavailable, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(gdns); err != nil {
-		fail(http.StatusBadRequest, err)
+		fail(http.StatusInternalServerError, err)
 		return
 	}
 
