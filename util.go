@@ -6,13 +6,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/miekg/dns"
+
 	secop "github.com/fardog/secureoperator"
 )
 
 var (
 	errNameInvalid         = errors.New("length of name parameter must be between 1 and 253")
 	errNameFragmentInvalid = errors.New("length of fragment in name parameter must be between 1 and 63")
-	errTypeInvalid         = errors.New("type could not be parsed to an integer")
+	errTypeInvalid         = errors.New("type could not be mapped to a valid DNS record type")
 	errTypeOutOfRange      = errors.New("type was not within valid bounds 1 < x < 65535")
 )
 
@@ -30,14 +32,17 @@ func urlToDNSQuestion(url *url.URL) (*secop.DNSQuestion, error) {
 	}
 
 	t := v.Get("type")
-	rtype, err := strconv.ParseUint(t, 10, 16)
-	if t != "" && err != nil {
-		return nil, errTypeInvalid
-	} else if t == "" {
+	var rtype uint16
+	if t == "" {
 		rtype = 1
-	}
-	if rtype < 1 || rtype > 65536 {
+	} else if st, ok := dns.StringToType[strings.ToUpper(t)]; ok {
+		rtype = st
+	} else if rt, err := strconv.ParseUint(t, 10, 16); err != nil {
+		return nil, errTypeInvalid
+	} else if rt < 1 {
 		return nil, errTypeOutOfRange
+	} else {
+		rtype = uint16(rt)
 	}
 
 	return &secop.DNSQuestion{
