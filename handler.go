@@ -10,7 +10,10 @@ import (
 	secop "github.com/fardog/secureoperator"
 )
 
-type HandlerOptions struct{}
+type HandlerOptions struct {
+	ContentTypeJSON bool
+	ServerHeader    string
+}
 
 func NewHandler(provider secop.Provider, options *HandlerOptions) *Handler {
 	return &Handler{
@@ -45,11 +48,20 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	gdns := fromDNStoGDNS(resp)
 
-	// these headers match google's service, as off as they may seem
-	w.Header().Set("content-type", "application/x-javascript; charset=UTF-8")
+	// these headers match google's service, as off as they may seem; we allow
+	// some override to more standard headers, however
+	if h.options.ContentTypeJSON {
+		w.Header().Set("content-type", "application/json; charset=UTF-8")
+	} else {
+		// this is google's content type
+		w.Header().Set("content-type", "application/x-javascript; charset=UTF-8")
+	}
 	w.Header().Set("cache-control", "private")
 	w.Header().Set("x-xss-protection", "1; mode=block")
 	w.Header().Set("x-frame-options", "SAMEORIGIN")
+	if h.options.ServerHeader != "" {
+		w.Header().Set("server", h.options.ServerHeader)
+	}
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(gdns); err != nil {

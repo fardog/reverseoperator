@@ -40,6 +40,20 @@ var (
         "8.8.8.8,8.8.4.4:53". The port section is optional, and 53 will be used
         by default.`,
 	)
+
+	useJSONContentType = flag.Bool(
+		"json-content-type",
+		false,
+		`Google's services use content-type header "application/x-javascript", 
+        however setting this flag overrides to "application/json", which is
+        more standard, but differs from Google.`,
+	)
+	serverHeader = flag.String(
+		"server-header",
+		"reverse-operator/1.0 (+https://github.com/fardog/reverse-operator)",
+		`Value to send in the Server header; if set to an empty string, no
+        header will be sent.`,
+	)
 )
 
 func serve(server *http.Server) {
@@ -93,7 +107,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	options := &revop.HandlerOptions{}
+	options := &revop.HandlerOptions{
+		ContentTypeJSON: *useJSONContentType,
+		ServerHeader:    *serverHeader,
+	}
 	handler := revop.NewHandler(provider, options)
 
 	mux := http.NewServeMux()
