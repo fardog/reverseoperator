@@ -4,20 +4,20 @@
 [[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
+  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
+  version = "v1.0.4"
 
 [[projects]]
+  branch = "master"
   name = "github.com/fardog/secureoperator"
   packages = [".","cmd"]
-  revision = "a3228535b86e8f6d202f35067dc7cb3e750bffaa"
-  version = "v2.2.1"
+  revision = "c43c55cb7c2e4d973ccb9df66b3d6d6e1198d68b"
 
 [[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "325e98bb8641b89fa2b1542149b09ec670953ac4"
+  revision = "c438b740fe140d99264f3b1d8e2cac25697329f6"
 
 [[projects]]
   branch = "master"
@@ -35,11 +35,11 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
+  revision = "9167dbfd0f8e88b731dd88cbf73a270701a37bb4"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "63bf7ded21633f8135a24af7dc7e426bfee388eb2cb889efcd8fdf7a482b1548"
+  inputs-digest = "45841822cce7cd4e4035b315d7c0bbadbaeed8ec9a1f24af784f31b16f23cb7e"
   solver-name = "gps-cdcl"
   solver-version = 1
