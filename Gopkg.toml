@@ -30,5 +30,5 @@
   name = "github.com/fardog/secureoperator"
 
 [[constraint]]
-  branch = "master"
+  version = "^1.0.0"
   name = "github.com/miekg/dns"
