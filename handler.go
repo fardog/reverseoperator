@@ -6,8 +6,6 @@ import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
-
-	secop "github.com/fardog/secureoperator"
 )
 
 type HandlerOptions struct {
@@ -15,7 +13,7 @@ type HandlerOptions struct {
 	ServerHeader    string
 }
 
-func NewHandler(provider secop.Provider, options *HandlerOptions) *Handler {
+func NewHandler(provider Provider, options *HandlerOptions) *Handler {
 	return &Handler{
 		options:  options,
 		provider: provider,
@@ -24,7 +22,7 @@ func NewHandler(provider secop.Provider, options *HandlerOptions) *Handler {
 
 type Handler struct {
 	options  *HandlerOptions
-	provider secop.Provider
+	provider Provider
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -34,13 +32,13 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 	}
 
-	q, err := urlToDNSQuestion(r.URL)
+	q, err := reqToDNSMsg(r)
 	if err != nil {
 		fail(http.StatusBadRequest, err)
 		return
 	}
 
-	resp, err := h.provider.Query(*q)
+	resp, err := h.provider.Query(q)
 	if err != nil {
 		fail(http.StatusServiceUnavailable, err)
 		return
@@ -69,5 +67,5 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("responded to request %v[%v]", q.Name, q.Type)
+	log.Infof("responded to request %v[%v]", q.Question[0].Name, q.Question[0].Qtype)
 }

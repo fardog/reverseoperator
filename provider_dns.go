@@ -19,13 +19,11 @@ type DNSProvider struct {
 	servers secop.Endpoints
 }
 
-func (c *DNSProvider) Query(q secop.DNSQuestion) (*secop.DNSResponse, error) {
+func (c *DNSProvider) Query(msg *dns.Msg) (*secop.DNSResponse, error) {
 	// we need to look it up
 	server := c.servers.Random()
-	msg := dns.Msg{}
-	msg.SetQuestion(dns.Fqdn(q.Name), q.Type)
 
-	r, err := exchange(&msg, server.String())
+	r, err := exchange(msg, server.String())
 	if err != nil {
 		return nil, err
 	}

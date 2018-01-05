@@ -2,7 +2,8 @@ package reverseoperator
 
 import (
 	"errors"
-	"net/url"
+	"net"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -16,10 +17,13 @@ var (
 	errNameFragmentInvalid = errors.New("length of fragment in name parameter must be between 1 and 63")
 	errTypeInvalid         = errors.New("type could not be mapped to a valid DNS record type")
 	errTypeOutOfRange      = errors.New("type was not within valid bounds 1 < x < 65535")
+	errInvalidCIDR         = errors.New("invalid CIDR was provided")
+	errBadRemoteAddress    = errors.New("bad remote address received")
+	errBadIPAddress        = errors.New("bad ip address")
 )
 
-func urlToDNSQuestion(url *url.URL) (*secop.DNSQuestion, error) {
-	v := url.Query()
+func reqToDNSMsg(r *http.Request) (*dns.Msg, error) {
+	v := r.URL.Query()
 
 	name := v.Get("name")
 	if l := len(name); l < 1 || l > 253 {
@@ -45,10 +49,71 @@ func urlToDNSQuestion(url *url.URL) (*secop.DNSQuestion, error) {
 		rtype = uint16(rt)
 	}
 
-	return &secop.DNSQuestion{
-		Name: name,
-		Type: uint16(rtype),
-	}, nil
+	msg := dns.Msg{}
+	msg.SetQuestion(dns.Fqdn(name), rtype)
+
+	if e := v.Get("edns_client_subnet"); e != secop.GoogleEDNSSentinelValue {
+		const (
+			IPv4Family = 1
+			IPv6Family = 2
+		)
+
+		var network *net.IPNet
+		var err error
+		// if not provided, use the remote address
+		if e == "" {
+			h, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				return nil, errBadRemoteAddress
+			}
+			ip := net.ParseIP(h)
+			if ip == nil {
+				return nil, errBadRemoteAddress
+			}
+
+			var mask net.IPMask
+			if ip.To4() != nil {
+				mask = net.CIDRMask(24, 32)
+			} else if ip.To16() != nil {
+				mask = net.CIDRMask(36, 128)
+			} else {
+				return nil, errBadIPAddress
+			}
+
+			network = &net.IPNet{
+				IP:   ip,
+				Mask: mask,
+			}
+		} else {
+			_, network, err = net.ParseCIDR(e)
+			if err != nil {
+				return nil, errInvalidCIDR
+			}
+		}
+
+		// ok, we have what we need; construct the record
+		o := new(dns.OPT)
+		o.Hdr.Name = "."
+		o.Hdr.Rrtype = dns.TypeOPT
+		e := new(dns.EDNS0_SUBNET)
+		e.Code = dns.EDNS0SUBNET
+		if network.IP.To4() != nil {
+			e.Family = IPv4Family
+		} else if network.IP.To16() != nil {
+			e.Family = IPv6Family
+		} else {
+			return nil, errBadIPAddress
+		}
+		msize, _ := network.Mask.Size()
+		e.SourceNetmask = uint8(msize)
+		e.SourceScope = 0
+		e.Address = network.IP.Mask(network.Mask)
+		o.Option = append(o.Option, e)
+
+		msg.Extra = append(msg.Extra, o)
+	}
+
+	return &msg, nil
 }
 
 func fromDNStoGDNS(d *secop.DNSResponse) *secop.GDNSResponse {
