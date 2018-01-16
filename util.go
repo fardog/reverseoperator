@@ -50,39 +50,37 @@ func reqToDNSMsg(r *http.Request) (*dns.Msg, error) {
 	}
 
 	msg := dns.Msg{}
+	header := dns.MsgHdr{
+		Authoritative:     true,
+		AuthenticatedData: true,
+		CheckingDisabled:  true,
+		RecursionDesired:  true,
+		Opcode:            dns.OpcodeQuery,
+	}
 	msg.SetQuestion(dns.Fqdn(name), rtype)
 
-	if e := v.Get("edns_client_subnet"); e != secop.GoogleEDNSSentinelValue {
-		const (
-			IPv4Family = 1
-			IPv6Family = 2
-		)
+	// disable DNSSEC checking if requested
+	cd := stringToBool(v.Get("cd"), false)
+	// treat "present but without value" as "disabled"; this is different from
+	// what v.Get("cd") would return, as it will provide an empty string whether
+	// the value is present or not
+	if val, ok := v["cd"]; ok && len(val) == 1 && val[0] == "" {
+		cd = true
+	}
+	if !cd {
+		header.CheckingDisabled = false
+		msg.SetEdns0(dns.DefaultMsgSize, true)
+	}
+	msg.MsgHdr = header
 
+	if e := v.Get("edns_client_subnet"); e != secop.GoogleEDNSSentinelValue {
 		var network *net.IPNet
 		var err error
 		// if not provided, use the remote address
 		if e == "" {
-			h, _, err := net.SplitHostPort(r.RemoteAddr)
+			network, err = remoteAddrToIPNet(r.RemoteAddr)
 			if err != nil {
-				return nil, errBadRemoteAddress
-			}
-			ip := net.ParseIP(h)
-			if ip == nil {
-				return nil, errBadRemoteAddress
-			}
-
-			var mask net.IPMask
-			if ip.To4() != nil {
-				mask = net.CIDRMask(24, 32)
-			} else if ip.To16() != nil {
-				mask = net.CIDRMask(36, 128)
-			} else {
-				return nil, errBadIPAddress
-			}
-
-			network = &net.IPNet{
-				IP:   ip,
-				Mask: mask,
+				return nil, err
 			}
 		} else {
 			_, network, err = net.ParseCIDR(e)
@@ -91,26 +89,11 @@ func reqToDNSMsg(r *http.Request) (*dns.Msg, error) {
 			}
 		}
 
-		// ok, we have what we need; construct the record
-		o := new(dns.OPT)
-		o.Hdr.Name = "."
-		o.Hdr.Rrtype = dns.TypeOPT
-		e := new(dns.EDNS0_SUBNET)
-		e.Code = dns.EDNS0SUBNET
-		if network.IP.To4() != nil {
-			e.Family = IPv4Family
-		} else if network.IP.To16() != nil {
-			e.Family = IPv6Family
-		} else {
-			return nil, errBadIPAddress
+		opt, err := ipNetToEDNSSubnetOption(network)
+		if err != nil {
+			return nil, err
 		}
-		msize, _ := network.Mask.Size()
-		e.SourceNetmask = uint8(msize)
-		e.SourceScope = 0
-		e.Address = network.IP.Mask(network.Mask)
-		o.Option = append(o.Option, e)
-
-		msg.Extra = append(msg.Extra, o)
+		msg.Extra = append(msg.Extra, opt)
 	}
 
 	return &msg, nil
@@ -145,4 +128,66 @@ func fromDNSQuestionToGDNSQuestion(d []secop.DNSQuestion) secop.GDNSQuestions {
 		g = append(g, secop.GDNSQuestion(r))
 	}
 	return g
+}
+
+func remoteAddrToIPNet(r string) (*net.IPNet, error) {
+	h, _, err := net.SplitHostPort(r)
+	if err != nil {
+		return nil, errBadRemoteAddress
+	}
+	ip := net.ParseIP(h)
+	if ip == nil {
+		return nil, errBadRemoteAddress
+	}
+
+	var mask net.IPMask
+	if ip.To4() != nil {
+		mask = net.CIDRMask(24, 32)
+	} else if ip.To16() != nil {
+		mask = net.CIDRMask(36, 128)
+	} else {
+		return nil, errBadIPAddress
+	}
+
+	return &net.IPNet{
+		IP:   ip,
+		Mask: mask,
+	}, nil
+}
+
+func ipNetToEDNSSubnetOption(n *net.IPNet) (*dns.OPT, error) {
+	const (
+		IPv4Family = 1
+		IPv6Family = 2
+	)
+
+	o := new(dns.OPT)
+	o.Hdr.Name = "."
+	o.Hdr.Rrtype = dns.TypeOPT
+	e := new(dns.EDNS0_SUBNET)
+	e.Code = dns.EDNS0SUBNET
+	if n.IP.To4() != nil {
+		e.Family = IPv4Family
+	} else if n.IP.To16() != nil {
+		e.Family = IPv6Family
+	} else {
+		return nil, errBadIPAddress
+	}
+	msize, _ := n.Mask.Size()
+	e.SourceNetmask = uint8(msize)
+	e.SourceScope = 0
+	e.Address = n.IP.Mask(n.Mask)
+	o.Option = append(o.Option, e)
+
+	return o, nil
+}
+
+func stringToBool(s string, fallback bool) bool {
+	if s == "1" || s == "true" {
+		return true
+	} else if s == "0" || s == "false" {
+		return false
+	}
+
+	return fallback
 }
