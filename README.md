@@ -1,5 +1,9 @@
 # reverseoperator
 
+**Deprecation Notice:** This repository is deprecated in favor of [dnoxy][].
+
+[dnoxy]: https://github.com/fardog/dnoxy
+
 [![Build Status](https://travis-ci.org/fardog/reverseoperator.svg?branch=master)](https://travis-ci.org/fardog/reverseoperator)
 [![](https://godoc.org/github.com/fardog/reverseoperator?status.svg)](https://godoc.org/github.com/fardog/reverseoperator)
 
